@@ -1,16 +1,40 @@
-import { fastify  } from 'fastify'
-import { fastifyCors } from '@fastify/cors'
+import { fastify } from "fastify";
+import { fastifyCors } from "@fastify/cors";
+import {
+  validatorCompiler,
+  serializerCompiler,
+  ZodTypeProvider,
+} from "fastify-type-provider-zod";
+import { z } from 'zod'
 
-const server = fastify();
+const server = fastify().withTypeProvider<ZodTypeProvider>();
 
-server.register(fastifyCors, {
-    origin: 'http:localhost:3000',
-})
+server.setSerializerCompiler(serializerCompiler)
+server.setValidatorCompiler(validatorCompiler)
 
-server.get('/hello', (req, res) => {
-    res.send({ Message: 'Hello World'})
-})
+server.register(fastifyCors);
 
-server.listen({ port: 8000}).then(() => {
-    console.log("Server Ligado http://localhost:8000")
-})
+server.post("/subscriptions", {
+    schema: {
+        body: z.object({
+            name: z.string(),
+            email: z.string().email(),
+            phone: z.number().optional()
+        }),
+        response: {
+            201: z.object({
+                name: z.string(),
+                email: z.string().email(),
+                phone: z.number().optional()
+            })
+        }
+    }
+}, async  (req, res) => {
+  const { name, email, phone } = req.body
+
+  return res.status(201).send({name, email, phone})
+});
+
+server.listen({ port: 8000 }).then(() => {
+  console.log("Server Ligado http://localhost:8000");
+});
