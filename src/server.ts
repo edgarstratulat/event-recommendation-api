@@ -1,11 +1,16 @@
-import { fastify } from "fastify";
 import { fastifyCors } from "@fastify/cors";
+import { fastifySwagger} from '@fastify/swagger'
+import { fastifySwaggerUi} from  '@fastify/swagger-ui'
+import { fastify } from "fastify";
 import {
-  validatorCompiler,
+  type ZodTypeProvider,
+  jsonSchemaTransform,
   serializerCompiler,
-  ZodTypeProvider,
+  validatorCompiler
 } from "fastify-type-provider-zod";
-import { z } from 'zod'
+import { env } from "./env";
+import { subscribeToEventRoute } from "./routes/subscribe-to-even-route";
+
 
 const server = fastify().withTypeProvider<ZodTypeProvider>();
 
@@ -14,27 +19,23 @@ server.setValidatorCompiler(validatorCompiler)
 
 server.register(fastifyCors);
 
-server.post("/subscriptions", {
-    schema: {
-        body: z.object({
-            name: z.string(),
-            email: z.string().email(),
-            phone: z.number().optional()
-        }),
-        response: {
-            201: z.object({
-                name: z.string(),
-                email: z.string().email(),
-                phone: z.number().optional()
-            })
-        }
-    }
-}, async  (req, res) => {
-  const { name, email, phone } = req.body
+server.register(fastifySwagger, {
+  openapi:  {
+    info: {
+      title: 'Event Recommendation App',
+      version: '0.0.1',
+    },
+  },
+  transform: jsonSchemaTransform
+})
 
-  return res.status(201).send({name, email, phone})
-});
+server.register(fastifySwaggerUi, {
+  routePrefix: '/docs'
+})
 
-server.listen({ port: 8000 }).then(() => {
-  console.log("Server Ligado http://localhost:8000");
+server.register(subscribeToEventRoute)
+
+
+server.listen({ port: env.PORT }).then(() => {
+  console.log("Server connected to http://localhost:8000");
 });
